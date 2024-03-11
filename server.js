@@ -7,6 +7,7 @@ const session = require('express-session');
 const passport = require('passport');
 const { ObjectID } = require('mongodb');
 const LocalStrategy = require('passport-local');
+const bcrypt = require('bcrypt');
 
 const app = express();
 
@@ -37,9 +38,37 @@ myDB(async client => {
     res.render('index', {
       title: 'Connected to Database',
       message: 'Please login',
-      showLogin: true
+      showLogin: true,
+      showRegistration: true
     });
   });
+
+  app.route('/register').post((req, res, next) => {
+    myDataBase.findOne({username: req.body.username }), (err, user) => {
+      if (err) {
+        next(err);
+      } else if (user) {
+        res.redirect('/');
+      } else {
+        const hash = bcrypt.hashSync(req.body.password, 12);
+        myDataBase.insertOne({
+          username: req.body.username,
+          password: hash
+        }, (err, doc) => {
+          if (err) {
+            res.redirect('/');
+          } else {
+            next(nullm, doc.ops[0]);
+          }
+        })
+      }
+    }
+  },
+    passport.authenticate('local', { faulureRedirect: "/" }),
+    (req, res, next) => {
+      res.redirect('/profile');
+    }
+  );
 
   app.route('/login').post(passport.authenticate('local', { failureRedirect: '/' }), (req, res) => {
     res.redirect('/profile');
@@ -49,12 +78,34 @@ myDB(async client => {
     res.render('profile', { username: req.user.username });
   });
 
+  app.route('/logout')
+    .get((req, res) => {
+      req.logout();
+      res.redirect('/');
+    });
+  
+  app.use((req, res, next) => {
+    res.status(404)
+      .type('text')
+      .send('Not Found');
+  });
+
   passport.use(new LocalStrategy((username, password, done) => {
     myDataBase.findOne({ username: username }, (err, user) => {
       console.log(`User ${username} attempted to log in.`);
-      if (err) { return done(err); }
-      if (!user) { return done(null, false); }
-      if (password !== user.password) { return done(null, false); }
+
+      if (err) { 
+        return done(err); 
+      }
+
+      if (!user) { 
+        return done(null, false); 
+      }
+
+      if (!bcrypt.compareSync(password, user.password)) { 
+        return done(null, false); 
+      }
+
       return done(null, user);
     });
   }));
