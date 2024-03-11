@@ -10,10 +10,6 @@ const { ObjectID } = require('mongodb');
 
 const app = express();
 
-fccTesting(app); //For FCC testing purposes
-app.use('/public', express.static(process.cwd() + '/public'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 app.set('view engine', 'pug');
 app.set('views', './views/pug');
 
@@ -24,23 +20,22 @@ app.use(session({
   cookie: { secure: false }
 }));
 
-passport.initialize();
-passport.session();
+app.use(passport.initialize()); 
+app.use(passport.session());
+
+fccTesting(app); //For FCC testing purposes
+app.use('/public', express.static(process.cwd() + '/public'));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 myDB(async client => {
   const myDataBase = await client.db('database').collection('users');
+
   app.route('/').get((req, res) => {
     res.render('index', { 
-      title: 'Hello', 
-      message: 'Connected to database' 
+      title: 'Connected to database', 
+      message: 'Please log in' 
     });
-  });
-}).catch(e => {
-  app.route('/').get((req, res) => {
-      res.render('index', { 
-        title: e, 
-        message: 'Unable to connect to database' 
-      });
   });
 
   passport.serializeUser((user, done) => {
@@ -51,6 +46,14 @@ myDB(async client => {
     myDataBase.findOne({ _id: new ObjectID(id) }, (err, doc) => {
       done(null, doc);
     });
+  });
+
+}).catch(e => {
+  app.route('/').get((req, res) => {
+      res.render('index', { 
+        title: e, 
+        message: 'Unable to connect to database' 
+      });
   });
 });
 
