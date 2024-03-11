@@ -5,6 +5,7 @@ const myDB = require('./connection');
 const fccTesting = require('./freeCodeCamp/fcctesting.js');
 const session = require('express-session');
 const passport = require('passport');
+const LocalStrategy = require('passport-local');
 const { ObjectID } = require('mongodb');
 
 const app = express();
@@ -26,16 +27,6 @@ app.use(session({
 passport.initialize();
 passport.session();
 
-passport.serializeUser((user, done) => {
-  done(null, user._id);
-});
-
-passport.deserializeUser((id, done) => {
-  myDataBase.findOne({ _id: new ObjectID(id) }, (err, doc) => {
-    done(null, doc);
-  });
-});
-
 myDB(async client => {
   const myDataBase = await client.db('database').collection('users');
   app.route('/').get((req, res) => {
@@ -50,6 +41,16 @@ myDB(async client => {
         title: e, 
         message: 'Unable to connect to database' 
       });
+  });
+
+  passport.serializeUser((user, done) => {
+    done(null, user._id);
+  });
+  
+  passport.deserializeUser((id, done) => {
+    myDataBase.findOne({ _id: new ObjectID(id) }, (err, doc) => {
+      done(null, doc);
+    });
   });
 });
 
