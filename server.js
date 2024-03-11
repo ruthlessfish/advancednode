@@ -32,12 +32,25 @@ passport.serializeUser((user, done) => {
 
 passport.deserializeUser((id, done) => {
   myDataBase.findOne({ _id: new ObjectID(id) }, (err, doc) => {
-    done(null, null);
+    done(null, doc);
   });
 });
 
-app.route('/').get((req, res) => {
-  res.render('index', { title: 'Hello', message: 'Please log in' });
+myDB(async client => {
+  const myDataBase = await client.db('database').collection('users');
+  app.route('/').get((req, res) => {
+    res.render('index', { 
+      title: 'Hello', 
+      message: 'Connected to database' 
+    });
+  });
+}).catch(e => {
+  app.route('/').get((req, res) => {
+      res.render('index', { 
+        title: e, 
+        message: 'Unable to connect to database' 
+      });
+  });
 });
 
 const PORT = process.env.PORT || 3000;
